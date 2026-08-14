@@ -1,0 +1,60 @@
+package com.cibertec.Proyecto_Integrador.service;
+
+import java.time.Instant;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
+import com.cibertec.Proyecto_Integrador.dto.request.CheckoutRequest;
+import com.cibertec.Proyecto_Integrador.dto.request.PaymentRequest;
+import com.cibertec.Proyecto_Integrador.dto.response.OrdenResponse;
+import com.cibertec.Proyecto_Integrador.dto.response.PageResponse;
+import com.cibertec.Proyecto_Integrador.entity.enums.EstadoOrden;
+
+public interface OrdenService {
+
+    /**
+     * Atomic checkout: cart → Orden (PENDIENTE), stock decrement, MovimientoStock, clear cart.
+     * Calcula el envío (gratis ≥ S/300, si no S/20) y desglosa el IGV (el precio ya lo
+     * incluye). El comprobante (boleta/factura + receptor) viene en {@code request}.
+     */
+    OrdenResponse confirmarCompra(String email, CheckoutRequest request);
+
+    /** Returns the authenticated client's orders ordered by date DESC. */
+    List<OrdenResponse> misOrdenes(String email);
+
+    /** Returns the client's own order detail. Throws ResourceNotFoundException (404) if IDOR. */
+    OrdenResponse miOrden(String email, Long orderId);
+
+    /**
+     * Simulated payment: PENDIENTE → CONFIRMADA.
+     * Throws ResourceNotFoundException (404) if IDOR.
+     * Throws OrderStatusTransitionException (422) if not PENDIENTE.
+     */
+    OrdenResponse pagar(String email, Long orderId, PaymentRequest request);
+
+    /** Admin: lista paginada de órdenes con filtros opcionales (estado, rango de fecha). */
+    PageResponse<OrdenResponse> listarOrdenes(EstadoOrden status, Instant from, Instant to, Pageable pageable);
+
+    /** Admin: single order by id. Throws ResourceNotFoundException (404) if not found. */
+    OrdenResponse obtenerOrden(Long orderId);
+
+    /**
+     * Admin: cambia el estado de una orden respetando la máquina de estados
+     * (EstadoOrdenPolicy). Transición ilegal → OrderStatusTransitionException (422).
+     * Cancelar (→ CANCELADA) repone el stock con un MovimientoStock(ENTRADA).
+     */
+    OrdenResponse actualizarEstado(Long orderId, EstadoOrden newStatus);
+
+    /**
+     * Cliente: PDF del comprobante (boleta/factura) de su propio pedido PAGADO.
+     * ResourceNotFoundException (404) si IDOR; ComprobanteNotAvailableException (409)
+     * si el pedido no está pagado (PENDIENTE/CANCELADA).
+     */
+    byte[] miComprobantePdf(String email, Long orderId);
+
+    /**
+     * Admin: PDF del comprobante de cualquier pedido PAGADO.
+     * ResourceNotFoundException (404) si no existe; ComprobanteNotAvailableException (409)
+     * si el pedido no está pagado.
+     */
+    byte[] comprobantePdf(Long orderId);
+}

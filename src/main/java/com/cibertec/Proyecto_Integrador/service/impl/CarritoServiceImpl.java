@@ -1,0 +1,228 @@
+package com.cibertec.Proyecto_Integrador.service.impl;
+
+import java.time.Instant;
+import java.util.List;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.cibertec.Proyecto_Integrador.dto.request.ItemCarritoRequest;
+import com.cibertec.Proyecto_Integrador.dto.request.UpdateQuantityRequest;
+import com.cibertec.Proyecto_Integrador.dto.response.CarritoResponse;
+import com.cibertec.Proyecto_Integrador.exception.InsufficientStockException;
+import com.cibertec.Proyecto_Integrador.exception.ResourceNotFoundException;
+import com.cibertec.Proyecto_Integrador.mapper.CarritoMapper;
+import com.cibertec.Proyecto_Integrador.entity.Carrito;
+import com.cibertec.Proyecto_Integrador.entity.ItemCarrito;
+import com.cibertec.Proyecto_Integrador.entity.Producto;
+import com.cibertec.Proyecto_Integrador.entity.Usuario;
+import com.cibertec.Proyecto_Integrador.repository.ItemCarritoRepository;
+import com.cibertec.Proyecto_Integrador.repository.CarritoRepository;
+import com.cibertec.Proyecto_Integrador.repository.ProductoRepository;
+import com.cibertec.Proyecto_Integrador.repository.UsuarioRepository;
+import com.cibertec.Proyecto_Integrador.service.CarritoService;
+
+@Service
+public class CarritoServiceImpl extends ICRUDImpl<Carrito, Long> implements CarritoService {
+
+    private final CarritoRepository cartRepository;
+    private final ItemCarritoRepository cartItemRepository;
+    private final ProductoRepository productRepository;
+    private final UsuarioRepository userRepository;
+    private final CarritoMapper cartMapper;
+    private final CarritoService self;
+
+    public CarritoServiceImpl(CarritoRepository cartRepository,
+                           ItemCarritoRepository cartItemRepository,
+                           ProductoRepository productRepository,
+                           UsuarioRepository userRepository,
+                           CarritoMapper cartMapper,
+                           @Lazy CarritoService self) {
+        this.cartRepository = cartRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.productRepository = productRepository;
+        this.userRepository = userRepository;
+        this.cartMapper = cartMapper;
+        this.self = self;
+    }
+
+    /** Repository que usa el CRUD genérico heredado (guardar/listarTodos/...). */
+    @Override
+    protected JpaRepository<Carrito, Long> repo() {
+        return cartRepository;
+    }
+
+    // ─── public API ─────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public CarritoResponse obtenerCarrito(String email) {
+        Usuario user = resolveUser(email);
+        return cartRepository.findByUser(user)
+                .map(this::currentCart)
+                .orElse(cartMapper.emptyCart());
+    }
+
+    /** Non-transactional orchestrator — catches constraint violation from tx1, retries in tx2. */
+    @Override
+    public CarritoResponse agregarItem(String email, ItemCarritoRequest request) {
+        try {
+            return self.intentarAgregarItem(email, request);
+        } catch (DataIntegrityViolationException ex) {
+            return self.fusionarEnConflicto(email, request);
+        }
+    }
+
+    @Override
+    @Transactional
+    public CarritoResponse intentarAgregarItem(String email, ItemCarritoRequest request) {
+        Usuario user = resolveUser(email);
+        Carrito cart = getOrCreateCart(user);
+        Producto product = resolveActiveProduct(request.productId());
+
+        java.util.Optional<ItemCarrito> existing = cartItemRepository.findByCartAndProduct(cart, product);
+        int finalQty = existing.map(i -> i.getQuantity() + request.quantity())
+                .orElse(request.quantity());
+
+        validateStock(product, finalQty);
+
+        if (existing.isEmpty()) {
+            ItemCarrito newItem = new ItemCarrito();
+            newItem.setCart(cart);
+            newItem.setProduct(product);
+            newItem.setQuantity(request.quantity());
+            cartItemRepository.saveAndFlush(newItem);  // surfaces UNIQUE violation synchronously
+        } else {
+            ItemCarrito item = existing.get();
+            item.setQuantity(finalQty);
+            cartItemRepository.save(item);
+        }
+
+        touch(cart);
+        return currentCart(cart);
+    }
+
+    @Override
+    @Transactional
+    public CarritoResponse fusionarEnConflicto(String email, ItemCarritoRequest request) {
+        Usuario user = resolveUser(email);
+        Carrito cart = getOrCreateCart(user);
+        Producto product = resolveActiveProduct(request.productId());
+
+        java.util.Optional<ItemCarrito> existing = cartItemRepository.findByCartAndProduct(cart, product);
+        int finalQty = existing.map(i -> i.getQuantity() + request.quantity())
+                .orElse(request.quantity());
+
+        validateStock(product, finalQty);
+
+        if (existing.isPresent()) {
+            ItemCarrito item = existing.get();
+            item.setQuantity(finalQty);
+            cartItemRepository.save(item);
+        } else {
+            // Defensive fallback: still absent — insert now (should not happen in normal flow)
+            ItemCarrito newItem = new ItemCarrito();
+            newItem.setCart(cart);
+            newItem.setProduct(product);
+            newItem.setQuantity(request.quantity());
+            cartItemRepository.save(newItem);
+        }
+
+        touch(cart);
+        return currentCart(cart);
+    }
+
+    @Override
+    @Transactional
+    public CarritoResponse actualizarItem(String email, Long itemId, UpdateQuantityRequest request) {
+        Usuario user = resolveUser(email);
+        ItemCarrito item = cartItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item no encontrado: " + itemId));
+        requireOwnedItem(item, user);
+
+        Producto product = resolveActiveProduct(item.getProduct().getId());
+        validateStock(product, request.quantity());
+
+        item.setQuantity(request.quantity());
+        cartItemRepository.save(item);
+        touch(item.getCart());
+        return currentCart(item.getCart());
+    }
+
+    @Override
+    @Transactional
+    public void quitarItem(String email, Long itemId) {
+        Usuario user = resolveUser(email);
+        ItemCarrito item = cartItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item no encontrado: " + itemId));
+        requireOwnedItem(item, user);
+
+        Carrito cart = item.getCart();
+        cartItemRepository.delete(item);
+        touch(cart);
+    }
+
+    @Override
+    @Transactional
+    public void vaciarCarrito(String email) {
+        Usuario user = resolveUser(email);
+        cartRepository.findByUser(user).ifPresent(cart -> {
+            cartItemRepository.deleteByCart(cart);
+            touch(cart);
+        });
+    }
+
+    // ─── private helpers ─────────────────────────────────────────────────────────
+
+    private Usuario resolveUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + email));
+    }
+
+    /** Used by WRITE paths only — GET synthesizes an empty response without persisting. */
+    private Carrito getOrCreateCart(Usuario user) {
+        return cartRepository.findByUser(user).orElseGet(() -> {
+            Carrito cart = new Carrito();
+            cart.setUser(user);
+            Instant now = Instant.now();
+            cart.setCreatedAt(now);
+            cart.setUpdatedAt(now);
+            return cartRepository.saveAndFlush(cart);
+        });
+    }
+
+    private Producto resolveActiveProduct(Long id) {
+        Producto product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
+        if (!product.isActive()) {
+            throw new ResourceNotFoundException("Producto no disponible: " + id);
+        }
+        return product;
+    }
+
+    private void validateStock(Producto product, int qty) {
+        if (qty > product.getStock()) {
+            throw new InsufficientStockException(
+                    "Stock insuficiente para el producto " + product.getId()
+                    + ": solicitado=" + qty + ", disponible=" + product.getStock());
+        }
+    }
+
+    private void touch(Carrito cart) {
+        cart.setUpdatedAt(Instant.now());
+        guardar(cart);   // ← heredado de ICRUDImpl
+    }
+
+    private ItemCarrito requireOwnedItem(ItemCarrito item, Usuario user) {
+        if (!item.getCart().getUser().getId().equals(user.getId())) {
+            throw new ResourceNotFoundException("Item no encontrado: " + item.getId());
+        }
+        return item;
+    }
+
+    private CarritoResponse currentCart(Carrito cart) {
+        List<ItemCarrito> items = cartItemRepository.findByCart(cart);
+        return cartMapper.toResponse(cart, items);
+    }
+}

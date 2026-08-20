@@ -53,6 +53,11 @@ public class JwtService {
         return parse(token).getPayload().getSubject();
     }
 
+    /** Rol del claim `role` ("ADMIN" | "CLIENTE"). Lo usa JwtAuthFilter para construir la authority. */
+    public String extractRole(String token) {
+        return parse(token).getPayload().get("role", String.class);
+    }
+
     private Jws<Claims> parse(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
     }

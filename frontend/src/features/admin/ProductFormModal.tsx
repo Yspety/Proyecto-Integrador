@@ -17,6 +17,8 @@ export function ProductFormModal({ product, onClose, onSaved }: {
   const [description, setDescription] = useState(product?.description ?? '');
   const [price, setPrice] = useState(product ? String(product.price) : '');
   const [stock, setStock] = useState(product ? String(product.stock) : '');
+  // Vacío en el alta = "usá tu default": el backend decide, no el formulario.
+  const [stockMin, setStockMin] = useState(product ? String(product.stockMin) : '');
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? '');
   const [categoryId, setCategoryId] = useState<number | ''>(product?.categoryId ?? '');
   const [saving, setSaving] = useState(false);
@@ -41,6 +43,7 @@ export function ProductFormModal({ product, onClose, onSaved }: {
       description: description.trim() || null,
       price: Number(price),
       stock: Number(stock),
+      ...(stockMin !== '' ? { stockMin: Number(stockMin) } : {}),
       imageUrl: imageUrl.trim() || null,
       categoryId: Number(categoryId),
     };
@@ -88,6 +91,11 @@ export function ProductFormModal({ product, onClose, onSaved }: {
             <label className="adm-field">
               <span>Stock</span>
               <input type="number" min="0" step="1" value={stock} onChange={(e) => setStock(e.target.value)} />
+            </label>
+            <label className="adm-field">
+              <span>Stock mínimo</span>
+              <input type="number" min="0" step="1" value={stockMin} onChange={(e) => setStockMin(e.target.value)} />
+              <small className="adm-field__hint">Con stock igual o menor, el producto entra en alerta de reposición.</small>
             </label>
             <label className="adm-field adm-field--full">
               <span>URL de imagen (opcional)</span>

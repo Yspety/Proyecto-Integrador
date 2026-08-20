@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Images, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Images, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { listCategories, search } from '../catalog/products.api';
 import { deleteProduct } from './admin-products.api';
+import { getLowStock } from './admin-inventory.api';
 import { ProductFormModal } from './ProductFormModal';
 import { ProductImagesModal } from './ProductImagesModal';
-import { PLACEHOLDER_IMAGE, type CategoryResponse, type ProductResponse } from '../../models/product';
+import { PLACEHOLDER_IMAGE, type AlertaStockResponse, type CategoryResponse, type ProductResponse } from '../../models/product';
 import './admin.css';
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 2 });
@@ -30,6 +31,16 @@ export function AdminProductsPage() {
   const [imagesFor, setImagesFor] = useState<ProductResponse | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
+  // Alerta de reposición. Se pide entera (no paginada) porque el aviso tiene que
+  // reflejar TODO el catálogo, no sólo lo que se ve en la página actual.
+  const [lowStock, setLowStock] = useState<AlertaStockResponse | null>(null);
+  const [showLowStock, setShowLowStock] = useState(false);
+
+  // La alerta se recalcula en cada reload porque editar stock la cambia al instante.
+  const reloadLowStock = useCallback(() => {
+    getLowStock().then(setLowStock).catch(() => setLowStock(null));
+  }, []);
+
   const reload = useCallback(() => {
     setLoading(true);
     setError(false);
@@ -37,7 +48,8 @@ export function AdminProductsPage() {
       .then((res) => { setProducts(res.content); setTotalPages(res.totalPages); setTotal(res.totalElements); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [page, nameDebounced, categoryFilter]);
+    reloadLowStock();
+  }, [page, nameDebounced, categoryFilter, reloadLowStock]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -86,10 +98,43 @@ export function AdminProductsPage() {
 
       {error && <p className="adm-alert">Ocurrió un error con la operación. Reintentá.</p>}
 
+      {lowStock && lowStock.total > 0 && (
+        <section className="inv-alert">
+          <button type="button" className="inv-alert__head" onClick={() => setShowLowStock((v) => !v)} aria-expanded={showLowStock}>
+            <AlertTriangle size={18} />
+            <span className="inv-alert__title">
+              {lowStock.total} {lowStock.total === 1 ? 'producto necesita' : 'productos necesitan'} reposición
+              {lowStock.sinStock > 0 && <em className="inv-alert__out"> · {lowStock.sinStock} sin stock</em>}
+            </span>
+            <span className="inv-alert__toggle">{showLowStock ? 'Ocultar' : 'Ver detalle'}</span>
+          </button>
+
+          {showLowStock && (
+            <div className="adm-tablewrap">
+              <table className="adm-table">
+                <thead><tr><th>SKU</th><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Faltante</th></tr></thead>
+                <tbody>
+                  {lowStock.productos.map((p) => (
+                    <tr key={p.productId}>
+                      <td className="adm-sku">{p.sku}</td>
+                      <td className="adm-name">{p.name}</td>
+                      <td>{p.categoryName}</td>
+                      <td><span className={p.stock === 0 ? 'adm-stock adm-stock--out' : 'adm-stock adm-stock--low'}>{p.stock}</span></td>
+                      <td>{p.stockMin}</td>
+                      <td><strong>+{p.faltante}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="adm-tablewrap">
         <table className="adm-table">
           <thead>
-            <tr><th aria-label="Imagen"></th><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th aria-label="Acciones"></th></tr>
+            <tr><th aria-label="Imagen"></th><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Mín.</th><th aria-label="Acciones"></th></tr>
           </thead>
           <tbody>
             {products.map((p) => (
@@ -99,7 +144,19 @@ export function AdminProductsPage() {
                 <td className="adm-name">{p.name}</td>
                 <td>{p.categoryName}</td>
                 <td>{pen.format(p.price)}</td>
-                <td><span className={p.stock === 0 ? 'adm-stock adm-stock--out' : 'adm-stock'}>{p.stock}</span></td>
+                <td>
+                  <span className={
+                    p.stock === 0 ? 'adm-stock adm-stock--out'
+                    : p.stock <= p.stockMin ? 'adm-stock adm-stock--low'
+                    : 'adm-stock'
+                  }>
+                    {p.stock}
+                  </span>
+                  {p.stock > 0 && p.stock <= p.stockMin && (
+                    <AlertTriangle className="adm-stock__warn" size={14} aria-label="Bajo el mínimo" />
+                  )}
+                </td>
+                <td className="adm-stockmin">{p.stockMin}</td>
                 <td className="adm-actions">
                   {confirmDelete === p.id ? (
                     <span className="adm-confirm">

@@ -29,6 +29,14 @@ export function AdminReportsPage() {
   const [top, setTop] = useState<TopProductosReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [dlError, setDlError] = useState<string | null>(null);
+
+  /** Envuelve las descargas para que un fallo se vea, en vez de no pasar nada. */
+  const descargar = (path: string, params: Record<string, string | number>, filename: string) => {
+    setDlError(null);
+    downloadReport(path, params, filename)
+      .catch(() => setDlError('No se pudo generar el archivo. Reintentá.'));
+  };
 
   // Kardex: producto elegido (autocomplete) + sus movimientos en el período.
   const [kardexProduct, setKardexProduct] = useState<ProductResponse | null>(null);
@@ -72,6 +80,7 @@ export function AdminReportsPage() {
       </div>
 
       {error && <p className="adm-alert">No se pudieron cargar los reportes.</p>}
+      {dlError && <p className="adm-alert">{dlError}</p>}
 
       {loading ? (
         <p className="adm-empty">Cargando reportes…</p>
@@ -87,8 +96,8 @@ export function AdminReportsPage() {
             <div className="rep-card__head">
               <h2>Ventas por {granularidad === 'mes' ? 'mes' : 'día'}</h2>
               <div className="rep-dl">
-                <button type="button" onClick={() => downloadReport('/api/admin/reports/ventas/excel', { desde, hasta, granularidad }, `ventas_${desde}_${hasta}.xlsx`)}><Download size={15} /> Excel</button>
-                <button type="button" onClick={() => downloadReport('/api/admin/reports/ventas/pdf', { desde, hasta, granularidad }, `ventas_${desde}_${hasta}.pdf`)}><Download size={15} /> PDF</button>
+                <button type="button" onClick={() => descargar('/api/admin/reports/ventas/excel', { desde, hasta, granularidad }, `ventas_${desde}_${hasta}.xlsx`)}><Download size={15} /> Excel</button>
+                <button type="button" onClick={() => descargar('/api/admin/reports/ventas/pdf', { desde, hasta, granularidad }, `ventas_${desde}_${hasta}.pdf`)}><Download size={15} /> PDF</button>
               </div>
             </div>
             {ventas && ventas.filas.length > 0 ? (
@@ -108,8 +117,8 @@ export function AdminReportsPage() {
             <div className="rep-card__head">
               <h2>Productos más vendidos</h2>
               <div className="rep-dl">
-                <button type="button" onClick={() => downloadReport('/api/admin/reports/productos-vendidos/excel', { desde, hasta, limit: 10 }, `productos_${desde}_${hasta}.xlsx`)}><Download size={15} /> Excel</button>
-                <button type="button" onClick={() => downloadReport('/api/admin/reports/productos-vendidos/pdf', { desde, hasta, limit: 10 }, `productos_${desde}_${hasta}.pdf`)}><Download size={15} /> PDF</button>
+                <button type="button" onClick={() => descargar('/api/admin/reports/productos-vendidos/excel', { desde, hasta, limit: 10 }, `productos_${desde}_${hasta}.xlsx`)}><Download size={15} /> Excel</button>
+                <button type="button" onClick={() => descargar('/api/admin/reports/productos-vendidos/pdf', { desde, hasta, limit: 10 }, `productos_${desde}_${hasta}.pdf`)}><Download size={15} /> PDF</button>
               </div>
             </div>
             {top && top.productos.length > 0 ? (
@@ -131,8 +140,8 @@ export function AdminReportsPage() {
               <h2>Kardex por producto</h2>
               {kardexProduct && (
                 <div className="rep-dl">
-                  <button type="button" onClick={() => downloadReport('/api/admin/reports/kardex/excel', { productId: kardexProduct.id, desde, hasta }, `kardex_${kardexProduct.id}.xlsx`)}><Download size={15} /> Excel</button>
-                  <button type="button" onClick={() => downloadReport('/api/admin/reports/kardex/pdf', { productId: kardexProduct.id, desde, hasta }, `kardex_${kardexProduct.id}.pdf`)}><Download size={15} /> PDF</button>
+                  <button type="button" onClick={() => descargar('/api/admin/reports/kardex/excel', { productId: kardexProduct.id, desde, hasta }, `kardex_${kardexProduct.id}.xlsx`)}><Download size={15} /> Excel</button>
+                  <button type="button" onClick={() => descargar('/api/admin/reports/kardex/pdf', { productId: kardexProduct.id, desde, hasta }, `kardex_${kardexProduct.id}.pdf`)}><Download size={15} /> PDF</button>
                 </div>
               )}
             </div>

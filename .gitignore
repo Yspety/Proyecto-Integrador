@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Runtime ###
+# Imágenes de producto subidas por el admin (app.uploads.dir). Son datos, no código:
+# cada entorno tiene las suyas y los nombres son UUID irrepetibles.
+uploads/

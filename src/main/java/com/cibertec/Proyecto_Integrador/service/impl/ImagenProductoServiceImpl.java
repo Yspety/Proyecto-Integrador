@@ -97,6 +97,7 @@ public class ImagenProductoServiceImpl extends ICRUDImpl<ImagenProducto, Long> i
         image.setProduct(product);
         image.setPath(filename);
         image.setDisplayOrder((short) count); // next slot
+        image.setCreatedAt(java.time.Instant.now());
         boolean isFirstImage = (count == 0);
         image.setCover(isFirstImage);
         guardar(image);   // ← heredado de ICRUDImpl

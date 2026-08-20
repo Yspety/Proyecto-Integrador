@@ -26,6 +26,7 @@ import com.cibertec.Proyecto_Integrador.service.OrdenService;
  * Authorization: /api/admin/** → hasRole("ADMIN") enforced by SecurityConfig.
  * No @AuthenticationPrincipal needed — admin context is not ownership-scoped.
  * Satisfies REQ-OM-10..REQ-OM-12, REQ-OM-13.
+ *
  */
 @RestController
 @RequestMapping("/api/admin/orders")

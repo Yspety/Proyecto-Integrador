@@ -5,8 +5,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Línea del carrito. UN producto aparece como máximo UNA vez por carrito — de ahí el
+ * UNIQUE(cart_id, product_id).
+ *
+ * <p>Esa restricción NO es decorativa: {@code CarritoServiceImpl.agregarItem()} está
+ * construido encima de ella. Inserta con {@code saveAndFlush} para que una colisión
+ * estalle como DataIntegrityViolationException y poder reintentar fusionando en una
+ * segunda transacción. Sin el UNIQUE, dos requests concurrentes del mismo producto
+ * crean DOS filas y el producto aparece duplicado en el carrito — y todo ese mecanismo
+ * de reintento queda como código muerto que nunca se ejecuta.
+ */
 @Entity
-@Table(name = "cart_item")
+@Table(name = "cart_item", uniqueConstraints = @UniqueConstraint(
+        name = "uk_cart_item_cart_product", columnNames = {"cart_id", "product_id"}))
 @Getter
 @Setter
 @NoArgsConstructor

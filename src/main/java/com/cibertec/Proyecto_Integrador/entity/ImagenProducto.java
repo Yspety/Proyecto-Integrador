@@ -30,6 +30,14 @@ public class ImagenProducto {
     @Column(name = "is_cover", nullable = false)
     private boolean isCover;
 
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    /**
+     * Lo setea el service, igual que Usuario.createdAt y Carrito.createdAt.
+     *
+     * <p>Antes estaba como {@code insertable = false}, que le delega el valor a un DEFAULT
+     * de la base. Pero ddl-auto genera la columna NOT NULL SIN default, así que el INSERT
+     * omitía el campo y MySQL lo rechazaba con "Field 'created_at' doesn't have a default
+     * value". Manejarlo desde la aplicación además evita atarse a la sintaxis de MySQL.
+     */
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 }

@@ -15,7 +15,8 @@ public interface StorageService {
     /**
      * Loads the file with the given filename as a Spring Resource.
      *
-     * @throws pe.com.krypton.exception.StorageException if the file is missing or unreadable
+     * @throws com.cibertec.Proyecto_Integrador.exception.ResourceNotFoundException if the file is missing
+     * @throws com.cibertec.Proyecto_Integrador.exception.StorageException if the path is unreadable
      */
     Resource load(String filename);
 

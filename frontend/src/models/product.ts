@@ -32,6 +32,8 @@ export interface ProductResponse {
   /** Java BigDecimal → number. */
   price: number;
   stock: number;
+  /** Punto de reposición: con stock <= stockMin el producto entra en alerta. */
+  stockMin: number;
   imageUrl: string | null;
   active: boolean;
   categoryId: number;
@@ -47,8 +49,32 @@ export interface ProductRequest {
   description?: string | null;
   price: number;
   stock: number;
+  /** Opcional: si no viaja, el backend usa su default en el alta y conserva el valor en la edición. */
+  stockMin?: number;
   imageUrl?: string | null;
   categoryId: number;
+}
+
+// ─── Inventario ───────────────────────────────────────────────────────────────
+
+/** Un producto que llegó a su punto de reposición. */
+export interface ProductoPorReponerRow {
+  productId: number;
+  sku: string;
+  name: string;
+  categoryName: string;
+  stock: number;
+  stockMin: number;
+  /** Cuánto falta para volver al mínimo (stockMin − stock). */
+  faltante: number;
+}
+
+/** Respuesta de GET /api/admin/inventory/low-stock. */
+export interface AlertaStockResponse {
+  total: number;
+  /** Cuántos de esos están en CERO — esos ya están perdiendo ventas. */
+  sinStock: number;
+  productos: ProductoPorReponerRow[];
 }
 
 /** Envoltorio de paginación genérico — refleja PageResponse<T> de Spring Data. */

@@ -127,6 +127,21 @@
 .adm-btn-danger:hover:not(:disabled) { background: var(--kr-danger-bg); }
 .adm-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* ─── Alerta de reposición ─────────────────────────────────────────────────── */
+/* Usa el amarillo de advertencia del design system, no el rojo de error: esto no
+   es algo que salió mal, es algo que hay que atender antes de que salga mal. */
+.inv-alert { border: 1px solid var(--kr-yellow-500); background: var(--kr-warning-bg); border-radius: 13px; margin-bottom: 18px; overflow: hidden; }
+.inv-alert__head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 16px; border: 0; background: none; cursor: pointer; text-align: left; font-family: var(--font-sans); color: var(--kr-navy-900); }
+.inv-alert__head svg { color: var(--kr-yellow-600); flex-shrink: 0; }
+.inv-alert__title { flex: 1; font-weight: 700; font-size: 14px; }
+.inv-alert__out { font-style: normal; font-weight: 800; color: var(--kr-danger); }
+.inv-alert__toggle { font-size: 13px; font-weight: 700; color: var(--kr-navy-700); text-decoration: underline; }
+.inv-alert .adm-tablewrap { margin: 0; border-top: 1px solid var(--kr-yellow-500); background: #fff; }
+
+.adm-stock--low { background: var(--kr-warning-bg); color: var(--kr-yellow-600); }
+.adm-stock__warn { color: var(--kr-yellow-600); vertical-align: middle; margin-left: 5px; }
+.adm-stockmin { color: var(--text-faint); font-size: 13px; }
+
 @media (max-width: 720px) {
   .adm-form__grid { grid-template-columns: 1fr; }
   .adm-table th:nth-child(2), .adm-table td:nth-child(2) { display: none; } /* oculta SKU/fecha en móvil */

@@ -11,6 +11,8 @@ public record ProductoResponse(
         String description,
         BigDecimal price,
         int stock,
+        /** Punto de reposición. {@code stock <= stockMin} dispara la alerta. */
+        int stockMin,
         String imageUrl,
         boolean active,
         Long categoryId,

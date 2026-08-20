@@ -26,7 +26,13 @@ export async function getKardex(productId: number, desde?: string, hasta?: strin
   return data;
 }
 
-/** Descarga un export (Excel/PDF) como archivo, respetando el Bearer del interceptor. */
+/**
+ * Descarga un export (Excel/PDF) como archivo, respetando el Bearer del interceptor.
+ *
+ * Propaga el error en vez de tragárselo: si el endpoint falla, el caller tiene que
+ * poder avisarle al usuario. Una descarga que no pasa nada al hacer clic es peor que
+ * un mensaje de error — el usuario reintenta creyendo que no apretó bien.
+ */
 export async function downloadReport(path: string, params: Record<string, string | number>, filename: string): Promise<void> {
   const res = await api.get(path, { params, responseType: 'blob' });
   const url = URL.createObjectURL(res.data as Blob);
@@ -34,5 +40,6 @@ export async function downloadReport(path: string, params: Record<string, string
   a.href = url;
   a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  // revoke diferido: Chrome cancela la descarga si se libera la URL en el mismo tick.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -1,5 +1,29 @@
 import { api } from '../../lib/api';
-import type { ProductRequest, ProductResponse } from '../../models/product';
+import type { PageResponse, ProductRequest, ProductResponse } from '../../models/product';
+
+// ─── Listado del panel ────────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/products — a diferencia del listado público, INCLUYE los productos
+ * dados de baja. El público filtra active=true, así que un producto eliminado
+ * desaparecía también del panel y no había forma de recuperarlo.
+ */
+export async function searchAdmin(
+  filters: { name?: string; categoryId?: number; active?: boolean },
+  page = 0,
+  size = 10,
+): Promise<PageResponse<ProductResponse>> {
+  const { data } = await api.get<PageResponse<ProductResponse>>('/api/admin/products', {
+    params: { ...filters, page, size },
+  });
+  return data;
+}
+
+/** PATCH /api/admin/products/{id}/status — reactiva (true) o da de baja (false). */
+export async function setProductActive(id: number, active: boolean): Promise<ProductResponse> {
+  const { data } = await api.patch<ProductResponse>(`/api/admin/products/${id}/status`, { active });
+  return data;
+}
 
 // ─── CRUD de productos (ADMIN) ────────────────────────────────────────────────
 

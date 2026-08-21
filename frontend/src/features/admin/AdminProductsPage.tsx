@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Images, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import { listCategories, search } from '../catalog/products.api';
-import { deleteProduct } from './admin-products.api';
+import { AlertTriangle, Images, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { listCategories } from '../catalog/products.api';
+import { deleteProduct, searchAdmin, setProductActive } from './admin-products.api';
 import { getLowStock } from './admin-inventory.api';
 import { ProductFormModal } from './ProductFormModal';
 import { ProductImagesModal } from './ProductImagesModal';
@@ -24,6 +24,8 @@ export function AdminProductsPage() {
   const [nameQuery, setNameQuery] = useState('');
   const [nameDebounced, setNameDebounced] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
+  // '' = todos (incluye dados de baja) · 'true' solo activos · 'false' solo eliminados
+  const [activeFilter, setActiveFilter] = useState<'' | 'true' | 'false'>('');
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
 
   // editing: null cerrado · 'new' alta · ProductResponse edición. imagesFor: galería.
@@ -44,12 +46,16 @@ export function AdminProductsPage() {
   const reload = useCallback(() => {
     setLoading(true);
     setError(false);
-    search({ name: nameDebounced || undefined, categoryId: categoryFilter || undefined }, page, PAGE_SIZE)
+    searchAdmin({
+      name: nameDebounced || undefined,
+      categoryId: categoryFilter || undefined,
+      active: activeFilter === '' ? undefined : activeFilter === 'true',
+    }, page, PAGE_SIZE)
       .then((res) => { setProducts(res.content); setTotalPages(res.totalPages); setTotal(res.totalElements); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
     reloadLowStock();
-  }, [page, nameDebounced, categoryFilter, reloadLowStock]);
+  }, [page, nameDebounced, categoryFilter, activeFilter, reloadLowStock]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -59,8 +65,17 @@ export function AdminProductsPage() {
     return () => clearTimeout(t);
   }, [nameQuery]);
   // Volver a página 0 al cambiar filtros + cargar categorías para el dropdown.
-  useEffect(() => { setPage(0); }, [nameDebounced, categoryFilter]);
+  useEffect(() => { setPage(0); }, [nameDebounced, categoryFilter, activeFilter]);
   useEffect(() => { listCategories().then(setCategories).catch(() => {}); }, []);
+
+  const onReactivate = async (id: number) => {
+    try {
+      await setProductActive(id, true);
+      reload();
+    } catch {
+      setError(true);
+    }
+  };
 
   const onDelete = async (id: number) => {
     try {
@@ -93,6 +108,11 @@ export function AdminProductsPage() {
         <select className="adm-filter-sel" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value ? Number(e.target.value) : '')}>
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select className="adm-filter-sel" value={activeFilter} onChange={(e) => setActiveFilter(e.target.value as '' | 'true' | 'false')}>
+          <option value="">Activos y eliminados</option>
+          <option value="true">Solo activos</option>
+          <option value="false">Solo eliminados</option>
         </select>
       </div>
 
@@ -134,11 +154,11 @@ export function AdminProductsPage() {
       <div className="adm-tablewrap">
         <table className="adm-table">
           <thead>
-            <tr><th aria-label="Imagen"></th><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Mín.</th><th aria-label="Acciones"></th></tr>
+            <tr><th aria-label="Imagen"></th><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Mín.</th><th>Estado</th><th aria-label="Acciones"></th></tr>
           </thead>
           <tbody>
             {products.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className={p.active ? undefined : 'adm-row--inactive'}>
                 <td><img className="adm-thumb" src={p.imageUrl || PLACEHOLDER_IMAGE} alt="" /></td>
                 <td className="adm-sku">{p.sku}</td>
                 <td className="adm-name">{p.name}</td>
@@ -157,6 +177,11 @@ export function AdminProductsPage() {
                   )}
                 </td>
                 <td className="adm-stockmin">{p.stockMin}</td>
+                <td>
+                  <span className={p.active ? 'adm-state adm-state--on' : 'adm-state adm-state--off'}>
+                    {p.active ? 'Activo' : 'Eliminado'}
+                  </span>
+                </td>
                 <td className="adm-actions">
                   {confirmDelete === p.id ? (
                     <span className="adm-confirm">
@@ -164,12 +189,16 @@ export function AdminProductsPage() {
                       <button type="button" className="adm-confirm__yes" onClick={() => onDelete(p.id)}>Sí</button>
                       <button type="button" className="adm-confirm__no" onClick={() => setConfirmDelete(null)}>No</button>
                     </span>
-                  ) : (
+                  ) : p.active ? (
                     <>
                       <button type="button" title="Imágenes" onClick={() => setImagesFor(p)}><Images size={17} /></button>
                       <button type="button" title="Editar" onClick={() => setEditing(p)}><Pencil size={17} /></button>
                       <button type="button" title="Borrar" className="adm-del" onClick={() => setConfirmDelete(p.id)}><Trash2 size={17} /></button>
                     </>
+                  ) : (
+                    <button type="button" className="adm-reactivate" onClick={() => onReactivate(p.id)}>
+                      <RotateCcw size={15} /> Reactivar
+                    </button>
                   )}
                 </td>
               </tr>

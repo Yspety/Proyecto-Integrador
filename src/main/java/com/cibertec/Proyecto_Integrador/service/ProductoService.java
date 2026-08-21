@@ -17,6 +17,17 @@ public interface ProductoService {
                                          BigDecimal priceMin, BigDecimal priceMax,
                                          Pageable pageable);
 
+    /**
+     * Búsqueda del panel admin: incluye productos dados de baja.
+     * {@code active} null lista todos; true/false filtra.
+     */
+    PageResponse<ProductoResponse> buscarAdmin(String name, Long categoryId,
+                                               BigDecimal priceMin, BigDecimal priceMax,
+                                               Boolean active, Pageable pageable);
+
+    /** Da de baja (false) o reactiva (true) un producto. Contraparte del soft-delete. */
+    ProductoResponse cambiarEstado(Long id, boolean active);
+
     /** Retorna el producto activo o lanza ResourceNotFoundException (404). */
     ProductoResponse buscarPorId(Long id);
 

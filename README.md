@@ -21,9 +21,8 @@ Maven **no** hace falta instalarlo: el repo trae el wrapper (`mvnw`).
 
 ## 2. Configurar la base de datos
 
-**No tenés que crear el schema ni correr ningún `.sql`.** La URL de conexión usa
-`createDatabaseIfNotExist=true`, así que la base `krypton` se crea sola en el primer
-arranque, y Hibernate genera las tablas.
+La base `krypton` se crea sola en el primer arranque (`createDatabaseIfNotExist=true`) y
+Hibernate genera las tablas. **No hace falta crear nada a mano.**
 
 Lo único que sí tenés que ajustar es **tu contraseña de MySQL**.
 
@@ -53,6 +52,29 @@ export DB_USER=root DB_PASSWORD=tu_password
 
 Esas variables valen solo para esa terminal. Si abrís una nueva, definilas otra vez (o
 agregalas a las variables de entorno del sistema).
+
+### Traer el catálogo del equipo
+
+El repo trae un volcado con los datos de demo — categorías, productos, fotos, usuarios y
+pedidos — para que todos trabajemos sobre lo mismo:
+
+```bash
+bash db/import.sh
+```
+
+> ⚠ Reemplaza tu base `krypton` local. Si ya cargaste cosas que querés conservar, corré
+> antes `bash db/export.sh` y guardate el archivo.
+
+Las fotos de los productos vienen en `uploads/` con el repo, así que no hay nada más
+que hacer.
+
+**Si cargás productos nuevos y querés compartirlos**, exportá y commiteá las dos cosas:
+
+```bash
+bash db/export.sh && git add db/krypton_seed.sql uploads/
+```
+
+El detalle está en [`db/README.md`](db/README.md).
 
 ---
 

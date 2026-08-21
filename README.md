@@ -271,4 +271,4 @@ Todavía no: **promociones/cupones** y **reseñas**. Las pantallas existen en el
 degradan sin romperse — muestran un mensaje de "no se pudieron cargar" y el resto de la
 app sigue andando.
 
-Para el detalle de arquitectura y las convenciones del código, mirá [CLAUDE.md](CLAUDE.md).
+Para el detalle de arquitectura y las convenciones del código, mirá [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).

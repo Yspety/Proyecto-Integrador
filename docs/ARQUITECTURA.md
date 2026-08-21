@@ -1,6 +1,7 @@
-# CLAUDE.md
+# Arquitectura
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Notas técnicas del proyecto: cómo está organizado, qué convenciones sigue y qué
+decisiones no hay que revertir sin entender por qué están.
 
 ## What this is
 

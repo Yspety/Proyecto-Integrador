@@ -37,3 +37,6 @@ build/
 # repo, pero acá el catálogo de demo se comparte por git (ver db/README.md): si
 # viajan las filas de product_image y no los archivos, cada foto responde 404.
 # Son pocos KB y es un proyecto académico; en producción esto iría a S3 o similar.
+
+### Config local de herramientas ###
+.claude/

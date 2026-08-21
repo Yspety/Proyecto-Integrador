@@ -5,42 +5,53 @@ E-commerce del Proyecto Integrador — CIBERTEC VI.
 - **Backend**: Spring Boot 4.1 · Java 21 · MySQL · JWT
 - **Frontend**: React 19 · TypeScript · Vite
 
+Hay dos formas de levantarlo. **Si es tu primera vez, usá Docker**: es un comando y no
+tenés que instalar nada más.
+
+| | [Con Docker](#opción-a--con-docker-recomendado) | [A mano](#opción-b--sin-docker) |
+|---|---|---|
+| Hay que instalar | Docker Desktop | JDK 21 · Node 20+ · MySQL 8 |
+| Comandos para arrancar | 1 | 3 |
+| La base viene con datos | Sí, sola | Hay que importarla |
+
 ---
 
-## Opción rápida: Docker
+## Opción A — Con Docker (recomendado)
 
-Si tenés **Docker Desktop** instalado y corriendo, no necesitás Java, Node ni MySQL:
+Necesitás **Docker Desktop** instalado y abierto (que diga *Engine running*).
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend → http://localhost:5173
+Y listo. Eso levanta MySQL, el backend y el frontend, con la base **ya cargada con el
+catálogo de demo y las fotos**.
+
+- Frontend → **http://localhost:5173**
 - Backend → http://localhost:8080
-- MySQL → `localhost:3307` (3307 para no chocar con el MySQL que tengas instalado)
+- MySQL → `localhost:3307`
 
-La base arranca **con el catálogo de demo ya cargado** y las fotos incluidas. La primera
-vez tarda unos minutos (compila el backend y el frontend); las siguientes son segundos.
+La primera vez tarda unos minutos porque compila las dos aplicaciones. Las siguientes
+son segundos.
 
-Para frenar todo:
+### Comandos del día a día
 
-```bash
-docker compose down
-```
+| Para | Comando |
+|---|---|
+| Frenar todo | `docker compose down` |
+| Frenar y **borrar la base** (recarga el seed al volver a subir) | `docker compose down -v` |
+| Ver los logs del backend | `docker compose logs -f backend` |
+| Reconstruir después de cambiar código | `docker compose up --build` |
 
-Y si querés empezar de cero, borrando la base y volviendo a cargar el seed:
-
-```bash
-docker compose down -v
-```
-
-> Si el 8080 o el 5173 ya están ocupados por tu backend o tu Vite local, frenalos antes.
-
-El resto de este README es para correrlo **sin Docker**, instalando cada cosa a mano.
+> **¿Por qué MySQL en el 3307 y no el 3306?** Para no chocar con el MySQL que quizás ya
+> tenés instalado en tu máquina. Dentro de Docker los contenedores se hablan por el 3306
+> igual; el 3307 es solo la puerta desde afuera, por si querés conectarte con Workbench.
 
 ---
 
-## 1. Qué necesitás instalado
+## Opción B — Sin Docker
+
+### 1. Qué necesitás instalado
 
 | | Versión | Cómo verificar |
 |---|---|---|
@@ -50,9 +61,7 @@ El resto de este README es para correrlo **sin Docker**, instalando cada cosa a 
 
 Maven **no** hace falta instalarlo: el repo trae el wrapper (`mvnw`).
 
----
-
-## 2. Configurar la base de datos
+### 2. Configurar la base de datos
 
 La base `krypton` se crea sola en el primer arranque (`createDatabaseIfNotExist=true`) y
 Hibernate genera las tablas. **No hace falta crear nada a mano.**
@@ -83,35 +92,17 @@ Bash (Git Bash, Linux, macOS):
 export DB_USER=root DB_PASSWORD=tu_password
 ```
 
-Esas variables valen solo para esa terminal. Si abrís una nueva, definilas otra vez (o
-agregalas a las variables de entorno del sistema).
+Esas variables valen solo para esa terminal. Si abrís una nueva, definilas otra vez.
 
-### Traer el catálogo del equipo
-
-El repo trae un volcado con los datos de demo — categorías, productos, fotos, usuarios y
-pedidos — para que todos trabajemos sobre lo mismo:
+Después, traé el catálogo de demo que viene en el repo:
 
 ```bash
 bash db/import.sh
 ```
 
-> ⚠ Reemplaza tu base `krypton` local. Si ya cargaste cosas que querés conservar, corré
-> antes `bash db/export.sh` y guardate el archivo.
+> ⚠ Reemplaza tu base `krypton` local.
 
-Las fotos de los productos vienen en `uploads/` con el repo, así que no hay nada más
-que hacer.
-
-**Si cargás productos nuevos y querés compartirlos**, exportá y commiteá las dos cosas:
-
-```bash
-bash db/export.sh && git add db/krypton_seed.sql uploads/
-```
-
-El detalle está en [`db/README.md`](db/README.md).
-
----
-
-## 3. Levantar el backend
+### 3. Levantar el backend
 
 Desde la **raíz** del proyecto:
 
@@ -121,31 +112,13 @@ Desde la **raíz** del proyecto:
 
 En PowerShell, si `./mvnw` no te funciona, usá `.\mvnw.cmd spring-boot:run`.
 
-Queda escuchando en **http://localhost:8080**. Sabés que arrancó bien cuando ves:
+Queda en **http://localhost:8080**. Arrancó bien cuando ves:
 
 ```
 Started ProyectoIntegradorApplication in 8.0 seconds
 ```
 
-### El primer administrador
-
-En el primer arranque, si la base no tiene ningún admin, se crea uno solo y lo avisa en
-la consola con un recuadro:
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  NO HABÍA NINGÚN ADMIN — se creó uno nuevo                   │
-└──────────────────────────────────────────────────────────────┘
-  email    : admin@krypton.pe
-  password : Krypton.Admin.2026
-```
-
-Con esas credenciales entrás al panel de `/admin`. Es idempotente: si ya existe un admin,
-no hace nada.
-
----
-
-## 4. Levantar el frontend
+### 4. Levantar el frontend
 
 En **otra terminal**, desde la carpeta `frontend/`:
 
@@ -157,26 +130,37 @@ npm install
 npm run dev
 ```
 
-Queda en **http://localhost:5173**. El `npm install` solo hace falta la primera vez (o
-cuando alguien agrega una dependencia).
+Queda en **http://localhost:5173**. El `npm install` solo hace falta la primera vez.
 
-El frontend apunta a `http://localhost:8080` por defecto. Si necesitás cambiarlo, creá un
-archivo `frontend/.env.local` con `VITE_API_BASE_URL=http://otro-host:puerto`.
+El frontend apunta a `http://localhost:8080` por defecto. Para cambiarlo, creá
+`frontend/.env.local` con `VITE_API_BASE_URL=http://otro-host:puerto`.
 
----
-
-## 5. Orden de arranque
+### 5. Orden de arranque
 
 1. **MySQL** — si no está corriendo, el backend no levanta.
-2. **Backend** — `./mvnw spring-boot:run`
-3. **Frontend** — `npm run dev`
+2. **Backend**
+3. **Frontend**
 
 El frontend levanta igual sin el backend, pero cada pantalla va a mostrar errores de
 carga: no tiene de dónde traer los datos.
 
 ---
 
-## 6. Probar que funciona
+## Entrar como administrador
+
+La base de demo ya trae un admin:
+
+```
+admin@krypton.pe
+Krypton.Admin.2026
+```
+
+Si arrancás con una base vacía, el backend crea uno solo y lo avisa en la consola con un
+recuadro grande. Es idempotente: si ya existe un admin, no hace nada.
+
+---
+
+## Probar que funciona
 
 Entrá a http://localhost:5173 y recorré:
 
@@ -186,21 +170,69 @@ Entrá a http://localhost:5173 y recorré:
 4. En el detalle del pedido → **Pagar** (es simulado, no cobra nada)
 5. **Descargar boleta** → te baja el PDF
 
-Y con el admin (`admin@krypton.pe`):
+Y con el admin:
 
-- `/admin/productos` — alta, edición, imágenes y alertas de stock mínimo
+- `/admin/productos` — alta, edición, imágenes, alertas de stock mínimo y reactivar eliminados
 - `/admin/pedidos` — cambiar estados de los pedidos
 - `/admin/reportes` — KPIs, gráficos, kardex y exports a Excel/PDF
 
 ---
 
-## 7. Si algo falla
+## Compartir los datos que cargues
+
+El catálogo viaja por el repo: el volcado en `db/krypton_seed.sql` y las fotos en
+`uploads/`. Si cargás productos nuevos desde el panel y querés que le lleguen al resto:
+
+Con Docker (la base está en el contenedor, puerto 3307):
+
+```bash
+DB_PORT=3307 bash db/export.sh
+```
+
+Sin Docker:
+
+```bash
+bash db/export.sh
+```
+
+Y después commiteá **las dos cosas** — sin los archivos, tus compañeros ven los productos
+sin foto:
+
+```bash
+git add db/krypton_seed.sql uploads/ && git commit -m "data: actualiza catalogo de demo"
+```
+
+> El volcado es **un archivo**: si dos personas exportan a la vez, el segundo `push` pisa
+> al primero. Mientras estén cargando datos, pónganse de acuerdo en quién exporta.
+
+Más detalle en [`db/README.md`](db/README.md).
+
+---
+
+## Si algo falla
+
+### Con Docker
+
+**`failed to connect to the docker API` / `the daemon is not running`**
+Docker Desktop no está abierto. Abrilo y esperá a que diga *Engine running*.
+
+**`port is already allocated`**
+Tenés algo ocupando el 8080, el 5173 o el 3307. Frená tu backend o tu Vite local
+(`taskkill /F /IM java.exe`, `taskkill /F /IM node.exe`).
+
+**Cambié el seed y sigue apareciendo el catálogo viejo**
+El `.sql` se ejecuta solo cuando se crea la base. Borrá el volumen: `docker compose down -v`
+
+**Cambié código y no se ve el cambio**
+Falta reconstruir la imagen: `docker compose up --build`
+
+### Sin Docker
 
 **`Failed to determine a suitable driver class` o `Access denied for user`**
-MySQL no está corriendo, o la contraseña no coincide. Revisá el paso 2.
+MySQL no está corriendo, o la contraseña no coincide.
 
 **`Communications link failure`**
-MySQL no está escuchando en el puerto 3306.
+MySQL no está escuchando en el 3306.
 
 **El frontend carga pero todo dice "no se pudieron cargar los datos"**
 El backend no está levantado, o está en otro puerto.
@@ -211,37 +243,29 @@ cuando el 5173 está ocupado), cerrá lo que lo esté usando, o definí
 `CORS_ORIGINS=http://localhost:PUERTO` antes de arrancar el backend.
 
 **`port 8080 was already in use`**
-Quedó un backend anterior corriendo. En Windows: `taskkill /F /IM java.exe`
+Quedó un backend anterior corriendo: `taskkill /F /IM java.exe`
 
 ---
 
-## 8. Comandos útiles
+## Comandos útiles
 
-Tests del backend:
+| Para | Comando |
+|---|---|
+| Tests del backend | `./mvnw test` |
+| Chequeo de tipos del frontend | `npm run build` |
+| Linter del frontend | `npm run lint` |
 
-```bash
-./mvnw test
-```
-
-Chequeo de tipos del frontend (ESLint acá no es type-aware, esto sí):
-
-```bash
-npm run build
-```
-
-Linter del frontend:
-
-```bash
-npm run lint
-```
+`npm run build` es la única forma de tener chequeo de tipos real: el ESLint de este
+proyecto no es type-aware.
 
 ---
 
-## 9. Qué está implementado
+## Qué está implementado
 
 Funcionando de punta a punta: **autenticación**, **catálogo** (productos, categorías,
 galería de imágenes), **carrito**, **pedidos** (checkout, pago simulado, estados, kardex
-de stock y comprobante PDF), **reportes** con exports y **alertas de inventario**.
+de stock y comprobante PDF), **reportes** con exports a Excel/PDF y **alertas de
+inventario**.
 
 Todavía no: **promociones/cupones** y **reseñas**. Las pantallas existen en el frontend y
 degradan sin romperse — muestran un mensaje de "no se pudieron cargar" y el resto de la

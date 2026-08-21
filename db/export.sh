@@ -9,11 +9,16 @@
 #
 # Y si tu usuario/contraseña no son root/mysql:
 #   DB_USER=root DB_PASSWORD=tu_password bash db/export.sh
+#
+# SI ESTÁS USANDO DOCKER, la base vive en el contenedor y escucha en el 3307:
+#   DB_PORT=3307 bash db/export.sh
 set -euo pipefail
 
 MYSQL_BIN="${MYSQL_BIN:-/c/Program Files/MySQL/MySQL Server 8.4/bin/mysqldump.exe}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-mysql}"
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-3306}"
 OUT="db/krypton_seed.sql"
 
 if [ ! -x "$MYSQL_BIN" ] && ! command -v "$MYSQL_BIN" > /dev/null 2>&1; then
@@ -27,6 +32,7 @@ fi
 # --complete-insert: los INSERT nombran las columnas, así que el dump no se rompe
 # si mañana Hibernate agrega una columna nueva.
 "$MYSQL_BIN" \
+  -h "$DB_HOST" -P "$DB_PORT" \
   -u "$DB_USER" -p"$DB_PASSWORD" \
   --databases krypton \
   --add-drop-database \

@@ -1,0 +1,73 @@
+# Levanta todo el proyecto con un solo comando:
+#
+#   docker compose up --build
+#
+# Frontend  → http://localhost:5173
+# Backend   → http://localhost:8080
+# MySQL     → localhost:3307  (3307 y no 3306 a propósito: así no choca con el
+#             MySQL que ya tengas instalado en tu máquina)
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: krypton-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: krypton
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Los .sql de este directorio se ejecutan SOLO la primera vez, cuando el
+      # volumen está vacío. Para recargar el seed hay que borrar el volumen:
+      #   docker compose down -v
+      - ./db/krypton_seed.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmysql"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  backend:
+    build: .
+    container_name: krypton-backend
+    environment:
+      # Dentro de la red de compose, el host de la base es el nombre del
+      # servicio ('mysql'), no localhost.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/krypton?createDatabaseIfNotExist=true&serverTimezone=UTC
+      DB_USER: root
+      DB_PASSWORD: mysql
+      # Origen desde el que el navegador va a pedir. Tiene que coincidir con el
+      # puerto publicado del frontend o todo muere en el preflight de CORS.
+      CORS_ORIGINS: http://localhost:5173
+      UPLOADS_DIR: /app/uploads
+      UPLOADS_BASE_URL: http://localhost:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      # Las fotos del repo entran acá, y las que subas desde el panel quedan en
+      # tu carpeta uploads/ lista para commitear.
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        # No alcanza con que el contenedor exista: hay que esperar a que MySQL
+        # acepte conexiones, o el backend arranca, no conecta y se muere.
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # La ve el navegador del usuario, por eso localhost y no 'backend'.
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: krypton-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

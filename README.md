@@ -7,6 +7,39 @@ E-commerce del Proyecto Integrador — CIBERTEC VI.
 
 ---
 
+## Opción rápida: Docker
+
+Si tenés **Docker Desktop** instalado y corriendo, no necesitás Java, Node ni MySQL:
+
+```bash
+docker compose up --build
+```
+
+- Frontend → http://localhost:5173
+- Backend → http://localhost:8080
+- MySQL → `localhost:3307` (3307 para no chocar con el MySQL que tengas instalado)
+
+La base arranca **con el catálogo de demo ya cargado** y las fotos incluidas. La primera
+vez tarda unos minutos (compila el backend y el frontend); las siguientes son segundos.
+
+Para frenar todo:
+
+```bash
+docker compose down
+```
+
+Y si querés empezar de cero, borrando la base y volviendo a cargar el seed:
+
+```bash
+docker compose down -v
+```
+
+> Si el 8080 o el 5173 ya están ocupados por tu backend o tu Vite local, frenalos antes.
+
+El resto de este README es para correrlo **sin Docker**, instalando cada cosa a mano.
+
+---
+
 ## 1. Qué necesitás instalado
 
 | | Versión | Cómo verificar |

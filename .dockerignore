@@ -1,0 +1,12 @@
+# Todo lo que no haga falta para compilar. Achica el contexto que se manda al
+# daemon y evita invalidar capas por archivos que no son código.
+target/
+frontend/
+db/
+uploads/
+.git/
+.gitignore
+.gitattributes
+*.md
+.vscode/
+.idea/

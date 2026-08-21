@@ -138,6 +138,16 @@
 .inv-alert__toggle { font-size: 13px; font-weight: 700; color: var(--kr-navy-700); text-decoration: underline; }
 .inv-alert .adm-tablewrap { margin: 0; border-top: 1px solid var(--kr-yellow-500); background: #fff; }
 
+/* ─── Estado del producto (soft delete) ────────────────────────────────────── */
+/* La fila eliminada se atenúa pero sigue legible: tiene que verse que existe y
+   que se puede recuperar, no parecer un error. */
+.adm-row--inactive td:not(.adm-actions) { opacity: 0.5; }
+.adm-state { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.adm-state--on { background: var(--kr-success-bg, #e8f5ec); color: var(--kr-success, #1a7f3c); }
+.adm-state--off { background: var(--kr-gray-100, #eceef1); color: var(--text-faint); }
+.adm-reactivate { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--kr-navy-800); border-radius: 9px; background: #fff; color: var(--kr-navy-800); font-family: var(--font-sans); font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.adm-reactivate:hover { background: var(--kr-gray-50); }
+
 .adm-stock--low { background: var(--kr-warning-bg); color: var(--kr-yellow-600); }
 .adm-stock__warn { color: var(--kr-yellow-600); vertical-align: middle; margin-left: 5px; }
 .adm-stockmin { color: var(--text-faint); font-size: 13px; }

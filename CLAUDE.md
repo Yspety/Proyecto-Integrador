@@ -160,7 +160,8 @@ Implemented and reachable:
 - `POST /api/auth/{register,login}`
 - `GET /api/products`, `GET /api/products/{id}`, `GET /api/categories` — public
 - `GET /api/uploads/images/{filename}` — public, immutable cache headers (UUID filenames never change content)
-- `POST/PUT/DELETE /api/admin/products`, `/api/admin/categories`
+- `GET/POST/PUT/DELETE /api/admin/products` (the GET includes inactive), `PATCH /api/admin/products/{id}/status`
+- `POST/PUT/DELETE /api/admin/categories`
 - `POST/DELETE/PATCH /api/admin/products/{id}/images*`
 - `GET/POST/PATCH /api/admin/users*`
 - `GET/POST/PUT/DELETE /api/cart*` — authenticated, scoped to the caller
@@ -207,9 +208,11 @@ Cart and order controllers take the owner via `@AuthenticationPrincipal String e
 
 Called by the frontend but **not yet implemented** — the remaining backlog: `/api/admin/promos`, `/api/promos/apply`, `/api/reviews`, `/api/admin/reports/{ventas,productos-vendidos,kardex}`.
 
-The admin panel reuses the **public** `GET /api/products` for its listing rather than having its own search endpoint — one query to keep correct, not two.
+### Public listing vs admin listing
 
-**Known consequence, not yet fixed:** that endpoint always filters `active = true`, and `DELETE /api/admin/products/{id}` is a soft delete. So deleting a product makes it vanish from the admin panel too, and there is no UI to see or reactivate it — the row is still there, reachable only by `PUT /api/admin/products/{id}` (which does not check `active`) or by SQL. An admin listing that includes inactive products, plus a reactivate action, is the missing piece.
+`GET /api/products` always filters `active = true`; `GET /api/admin/products` does not, and takes an optional `active` param (`true` / `false` / omitted = both). `DELETE /api/admin/products/{id}` is a **soft delete**, so the admin listing is the only way to see a deleted product, and `PATCH /api/admin/products/{id}/status` brings it back.
+
+The panel used to reuse the public search — one query instead of two — and that quietly made deleted products unrecoverable from the UI. It read as data loss: users assumed `ddl-auto=update` was wiping the database on restart. It never was. **A soft delete needs a listing that can see the deleted rows, or it is a hard delete with extra steps.**
 
 ### Error contract
 

@@ -67,6 +67,42 @@ public class ProductoServiceImpl extends ICRUDImpl<Producto, Long> implements Pr
         return PageResponse.of(page);
     }
 
+    /**
+     * Búsqueda del PANEL: incluye los productos dados de baja.
+     *
+     * <p>El listado público filtra {@code active = true} y el borrado es lógico, así que
+     * un producto eliminado también desaparecía del panel — sin forma de verlo ni
+     * recuperarlo desde la aplicación. Parecía pérdida de datos y no lo era.
+     *
+     * @param active {@code null} = todos; {@code true}/{@code false} para filtrar.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProductoResponse> buscarAdmin(String name, Long categoryId,
+                                                      BigDecimal priceMin, BigDecimal priceMax,
+                                                      Boolean active, Pageable pageable) {
+        Specification<Producto> spec = Specification
+                .where(ProductoSpecification.isActive(active))   // null = sin filtrar
+                .and(ProductoSpecification.nameLike(name))
+                .and(ProductoSpecification.hasCategory(categoryId))
+                .and(ProductoSpecification.priceBetween(priceMin, priceMax));
+
+        Page<ProductoResponse> page = productRepository
+                .findAll(spec, pageable)
+                .map(productMapper::toResponse);
+
+        return PageResponse.of(page);
+    }
+
+    /** Da de baja o reactiva un producto. Es la contraparte del soft-delete. */
+    @Override
+    @Transactional
+    public ProductoResponse cambiarEstado(Long id, boolean active) {
+        Producto product = findOrThrow(id);
+        product.setActive(active);
+        return productMapper.toResponse(guardar(product));   // ← heredado de ICRUDImpl
+    }
+
     @Override
     @Transactional(readOnly = true)
     public ProductoResponse buscarPorId(Long id) {
